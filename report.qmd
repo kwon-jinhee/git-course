@@ -1,0 +1,162 @@
+---
+title: "Time-resolved target decoding across n-back load"
+author: "Jinhee"
+format:
+  html:
+    toc: true
+    code-fold: true
+    code-tools: true
+    embed-resources: true
+execute:
+  echo: true
+  warning: false
+  message: false
+---
+
+```{r}
+#| label: setup
+#| include: false
+
+library(readr)
+library(dplyr)
+library(knitr)
+
+behaviour <- read_csv(
+  "results/group_behaviour_by_nback.csv",
+  show_col_types = FALSE
+)
+
+behaviour_1 <- behaviour |> filter(n_back == 1)
+behaviour_5 <- behaviour |> filter(n_back == 5)
+
+peak_results <- read_csv(
+  "results/group_peak_decoding_summary.csv",
+  show_col_types = FALSE
+)
+
+peak_1 <- peak_results |> filter(n_back == 1)
+peak_5 <- peak_results |> filter(n_back == 5)
+
+peak_test <- read_csv(
+  "results/group_peak_latency_trend_test.csv",
+  show_col_types = FALSE
+)
+```
+
+# Research question
+
+**Does increased n-back load shift the timing of peak target decoding?**
+
+The analysis examines whether increasing working-memory load changes the time at which target-related information is most strongly discriminable from the EEG signal. Behavioural performance and evoked responses are included as complementary measures of task performance and neural response dynamics.
+
+# Data
+
+The project uses [Simulated Dataset 2](https://k-cir.github.io/course-open-science-in-practice/resources/simulated-dataset-2/) from the *Open Science in Practice* course.
+
+The dataset contains behavioural and EEG data from 30 simulated participants who completed a sequential n-back task in two laboratory sessions. Both sessions are included in the present analysis. The task contains target and non-target trials across five working-memory load levels, from 1-back to 5-back, together with behavioural measures of response accuracy and reaction time.
+
+The EEG data contain stimulus-locked amplitudes from -100 to 800 ms relative to target or non-target onset at 1-ms resolution. Behavioural and EEG trials are linked by trial identifiers. The EEG dataset contains a single time series for each trial, so the present project focuses on temporal rather than spatial patterns in the signal.
+
+# Analysis workflow
+
+The analysis proceeded from trial-level preprocessing to participant- and session-level behavioural, evoked-response, and decoding analyses. Behavioural and EEG data were joined by trial, and the EEG signal was baseline-corrected using the pre-stimulus interval.
+
+Target versus non-target status was decoded separately within each n-back level using time-resolved 50-ms sliding EEG windows with a 25-ms step and stratified five-fold cross-validation. Peak decoding latency was defined as the midpoint of the window with the highest decoding accuracy within the 200–500 ms post-stimulus interval.
+
+Results from the two sessions were then averaged within participant before group-level summaries were calculated. Finally, the relationship between n-back load and peak decoding latency was tested at the group level.
+
+```{r}
+#| label: fig-workflow
+#| fig-cap: "Overview of the analysis workflow."
+#| echo: false
+
+include_graphics("flowchart.png")
+```
+
+# Behavioural results
+
+Behavioural performance changed systematically with increasing n-back load. Mean accuracy decreased from `r sprintf("%.2f", behaviour_1$mean_accuracy)` in the 1-back condition to `r sprintf("%.2f", behaviour_5$mean_accuracy)` in the 5-back condition, while mean reaction time for correct target responses increased from approximately `r round(behaviour_1$mean_rt_ms)` ms to `r round(behaviour_5$mean_rt_ms)` ms. The intermediate load levels showed the same graded pattern, with lower accuracy and longer response times as task demands increased.
+
+These behavioural results indicate progressively poorer and slower performance with increasing working-memory load, providing behavioural context for the subsequent neural analyses.
+
+```{r}
+#| label: fig-behaviour-accuracy
+#| fig-cap: "Group-level behavioural accuracy across n-back levels. Error bars show 95% confidence intervals."
+#| echo: false
+
+include_graphics("figures/group_behavioural_accuracy.png")
+```
+
+```{r}
+#| label: fig-behaviour-rt
+#| fig-cap: "Mean reaction time for correct target responses across n-back levels. Error bars show 95% confidence intervals."
+#| echo: false
+
+include_graphics("figures/group_behavioural_rt.png")
+```
+
+# Evoked responses
+
+Target-related evoked responses were examined as a complementary description of how neural response dynamics varied with n-back load. The target-minus-non-target waveforms showed load-dependent differences in the post-stimulus response, with the temporal pattern tending to occur later at higher n-back levels.
+
+These evoked responses provide physiological context for the decoding analysis, but the latency of the evoked response is not treated as equivalent to peak decoding latency.
+
+```{r}
+#| label: fig-evoked
+#| fig-cap: "Group-level target-minus-non-target evoked responses across n-back levels. Waveforms are low-pass filtered at 10 Hz for display only."
+#| echo: false
+
+include_graphics("figures/group_evoked_target_difference.png")
+```
+
+# Time-resolved decoding
+
+## Decoding over time
+
+Target versus non-target decoding was close to chance during much of the pre-stimulus and early post-stimulus period and increased later in the trial. The time course of decoding differed across n-back levels, with the highest decoding performance occurring progressively later as working-memory load increased.
+
+The decoding analysis therefore suggests that increasing n-back load primarily affected the timing at which target-related information was maximally discriminable from the EEG signal.
+
+```{r}
+#| label: fig-decoding
+#| fig-cap: "Group-level target-versus-non-target decoding across n-back levels. The dashed horizontal line indicates chance-level balanced accuracy."
+#| echo: false
+
+include_graphics("figures/group_target_decoding_by_nback.png")
+```
+
+## Peak decoding latency
+
+Peak decoding latency increased from approximately `r round(peak_1$mean_peak_latency_ms)` ms in the 1-back condition to `r round(peak_5$mean_peak_latency_ms)` ms in the 5-back condition. The group-level pattern was approximately monotonic, indicating a progressive shift toward later peak decoding with increasing task load.
+
+```{r}
+#| label: fig-peak-latency
+#| fig-cap: "Peak target-decoding latency across n-back levels. Grey points show participant-level values averaged across sessions; coloured points and error bars show group estimates and 95% confidence intervals."
+#| echo: false
+
+include_graphics("figures/group_peak_decoding_latency_by_nback.png")
+```
+
+A group-level linear trend analysis was used to test whether peak decoding latency increased systematically with n-back load.
+
+```{r}
+#| label: tbl-peak-test
+#| tbl-cap: "Linear trend test for the relationship between n-back load and peak decoding latency."
+#| echo: false
+
+kable(
+  peak_test,
+  digits = 3
+)
+```
+
+# Discussion
+
+The results support the hypothesis that increasing n-back load shifts the timing of peak target decoding. Behavioural performance deteriorated systematically with load, with lower accuracy and longer reaction times at higher n-back levels. At the same time, both the evoked-response and decoding analyses showed changes in the temporal dynamics of the EEG response.
+
+
+# Reproducibility
+
+The project was organised as a reproducible analysis pipeline. Raw and derived data, numerical results, figures, and analysis scripts were kept separate. Participant- and session-level preprocessing and analyses were performed in modular R scripts, followed by separate scripts for combining results and performing group-level analyses.
+
+Package dependencies are managed using `renv`, while Git and GitHub are used for version control. Generated results and figures are produced by the analysis scripts. The Quarto document reads previously generated numerical results and figures and combines them with the written interpretation.
